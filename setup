@@ -397,7 +397,7 @@ create_vm() {
   fi
   [[ ! -d "/sys/class/net/$bridge" ]] && log_and_exit "Bridge $bridge does not exist" "$logfile"
 
-  local cpu_args device_args='-device isa-applesmc,osk="ourhardworkbythesewordsguardedpleasedontsteal(c)AppleComputerInc" -smbios type=2'
+  local cpu_args device_args='-device isa-applesmc,osk="ourhardworkbythesewordsguardedpleasedontsteal(c)AppleComputerInc"'
   if [[ "$version_name" =~ ^(Sonoma|Sequoia)$ ]]; then
     device_args="$device_args -device qemu-xhci -device usb-kbd -device usb-tablet -global nec-usb-xhci.msi=off"
   else
@@ -416,6 +416,8 @@ create_vm() {
   # Check QEMU version and append hotplug fix if 6.1 or newer
   local qemu_version=$(qemu-system-x86_64 --version | awk '/version/ {print $4}' | cut -d'(' -f1)
   version_compare "$qemu_version" "6.1" && device_args="$device_args -global ICH9-LPC.acpi-pci-hotplug-with-bridge-support=off"
+  # Add -smbios type=2 only for QEMU < 9.0; QEMU 9+ enforces required fields which breaks standalone type=2
+  version_compare "$qemu_version" "9.0" || device_args="$device_args -smbios type=2"
 
   qm create "$vm_id" \
     --agent 1 --args "$device_args $cpu_args" --autostart 0 \
